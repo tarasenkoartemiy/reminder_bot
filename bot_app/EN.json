@@ -1,0 +1,32 @@
+{
+  "start": {
+    "start_of_use": "Please select a language",
+    "not_authorized": "You can't go to the home page yet",
+    "home_page": "To create a reminder or note, just write it"
+  },
+  "select_language": {
+    "first_choice": "Please enter your city",
+    "same_choice": "This language has already been chosen by you",
+    "another_choice": "Your language has been successfully changed"
+  },
+  "enter_city": {
+    "success_response": "Cool, now I know a little more about you",
+    "bad_response": "The service I'm using for this operation is not working right now",
+    "bad_city": "I don't know this city, try again"
+  },
+  "enter_text": "Please select a reminder date",
+  "select_date": {
+    "valid_date": "Please write the time in HH:MM format",
+    "bad_date": "You cannot select a date that has already passed. Please try again"
+  },
+  "enter_time": {
+    "valid_time": "Reminder successfully recorded",
+    "bad_time": "Wrong format, try again"
+  },
+  "home_page": {
+    "btn1": "My reminders",
+    "btn2": "My notes",
+    "btn3": "Rating",
+    "btn4": "Settings"
+  }
+}
