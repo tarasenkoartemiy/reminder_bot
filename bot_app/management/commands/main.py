@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from bot_app.timezone import getting_coordinates, is_time_format
 from bot_app.models import User, Reminder
@@ -8,7 +9,6 @@ from reminder_bot.settings import TOKEN
 from bot_app.response import opener
 
 from zoneinfo import ZoneInfo
-from datetime import datetime
 
 from telebot_calendar import Calendar, ENGLISH_LANGUAGE, RUSSIAN_LANGUAGE
 from telebot.apihelper import ApiTelegramException
@@ -23,7 +23,7 @@ class Command(BaseCommand):
         pass
 
 
-now = datetime.now()
+now = timezone.now()
 bot = telebot.TeleBot(TOKEN)
 en_calendar = Calendar(language=ENGLISH_LANGUAGE)
 ru_calendar = Calendar(language=RUSSIAN_LANGUAGE)
@@ -128,25 +128,71 @@ def reply_answer(message):
         bot.send_message(message.chat.id, opener("start", "start_of_use", language="EN"))
     elif user.status == status[2]:
         coordinates = getting_coordinates(message.text)
-        timezone = coordinates() if coordinates else coordinates
-        # timezone can be True only if coordinates = True
+        time_zone = coordinates() if coordinates else coordinates
+        # time_zone can be True only if coordinates = True
         # In other words, the two apis worked well
-        if timezone:
-            user.time_zone = timezone
+        if time_zone:
+            user.time_zone = time_zone
             user.status = status[3]
             user.save()
             keyboard = reply_buttons(*opener("home_page", language=user.language).values())(resize_keyboard=True,
                                                                                             row_width=2)
             msg = opener("enter_city", "success_response", language=user.language)
-        # timezone = None when coordinates = True. In other words, the second api does not work
+        # time_zone = None when coordinates = True. In other words, the second api does not work
         # OR coordinates = None. In other words, the first api does not work
-        elif timezone is None:
+        elif time_zone is None:
             keyboard = None
             msg = opener("enter_city", "bad_response", language=user.language)
         else:
             msg = opener("enter_city", "bad_city", language=user.language)
             keyboard = None
         bot.send_message(message.chat.id, msg, reply_markup=keyboard)
+    elif message.text == opener("home_page", "btn1", language=user.language):
+        if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
+            context = {
+                "header1": opener("my_reminders", "header1", language=user.language),
+                "header2": opener("my_reminders", "header2", language=user.language),
+                "header3": opener("my_reminders", "header3", language=user.language),
+                "header4": opener("my_reminders", "header4", language=user.language),
+                "reminders": reminders,
+                "example1": opener("my_reminders", "example1", language=user.language),
+                "example2": opener("my_reminders", "example2", language=user.language),
+                "preposition": opener("my_reminders", "preposition", language=user.language)
+            }
+            bot.send_message(message.chat.id, render_to_string("bot_app/My_reminders.html", context=context),
+                             parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
+    elif message.text == opener("home_page", "btn2", language=user.language):
+        if notes := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=True):
+            context = {
+                "header1": opener("my_notes", "header1", language=user.language),
+                "header2": opener("my_notes", "header2", language=user.language),
+                "notes": notes
+            }
+            bot.send_message(message.chat.id, render_to_string("bot_app/My_notes.html", context=context),
+                             parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, opener("my_notes", "empty_list", language=user.language))
+    elif message.text == opener("home_page", "btn3", language=user.language):
+        context = {
+            "header": opener("rating", "header", language=user.language),
+            "users": User.objects.all().order_by("-reminder_count")
+        }
+        bot.send_message(message.chat.id, render_to_string("bot_app/Rating.html", context=context),
+                         parse_mode="HTML")
+    elif message.text == opener("home_page", "btn4", language=user.language):
+        context = {
+            "header": opener("settings", "header", language=user.language),
+            "language": opener("settings", "language", language=user.language),
+            "language_value": user.language,
+            "time_zone": opener("settings", "time_zone", language=user.language),
+            "time_zone_value": user.time_zone,
+            "local_time": opener("settings", "local_time", language=user.language),
+            "local_time_value": now
+        }
+        bot.send_message(message.chat.id, render_to_string("bot_app/Settings.html", context=context),
+                         parse_mode="HTML")
     elif user.status == status[3]:
         Reminder.objects.create(id=message.message_id, user_id=message.chat.id, text=message.text)
         user.status = status[4]

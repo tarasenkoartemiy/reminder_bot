@@ -28,5 +28,30 @@
     "btn2": "My notes",
     "btn3": "Rating",
     "btn4": "Settings"
+  },
+  "my_reminders": {
+    "header1": "To change the reminder, click on its number under this message",
+    "header2": "Active reminders look like this",
+    "header3": "Inactive reminders look like this",
+    "header4": "Your reminders",
+    "example1": "Hi, I'm your reminder!",
+    "example2": "Hey I'm your reminder too!",
+    "preposition": "at",
+    "empty_list": "You have no reminders"
+  },
+  "my_notes": {
+    "header1": "To change a note, click on its number under this message",
+    "header2": "Your notes",
+    "empty_list": "You have no notes"
+
+  },
+  "rating": {
+    "header": "Rating of users by the number of reminders created"
+  },
+  "settings": {
+    "header": "Your settings",
+    "language": "language",
+    "time_zone": "time zone",
+    "local_time": "local time"
   }
 }

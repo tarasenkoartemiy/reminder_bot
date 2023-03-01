@@ -1,0 +1,5 @@
+{{ header1 }}
+
+{{ header2 }}:
+{% for note in notes %} {{ forloop.counter }}. {{ note.text }}
+{% endfor %}
