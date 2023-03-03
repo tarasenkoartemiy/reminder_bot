@@ -8,6 +8,7 @@ from bot_app.models import User, Reminder
 from reminder_bot.settings import TOKEN
 from bot_app.response import opener
 
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from telebot_calendar import Calendar, ENGLISH_LANGUAGE, RUSSIAN_LANGUAGE
@@ -107,10 +108,9 @@ def callback_inline(call):
                 pass
         bot.send_message(call.message.chat.id, msg, reply_markup=keyboard)
     elif "DAY" in call.data and user.status == status[4]:
-        list_date = call.data.split(":")
-        str_date = "-".join(list_date[2:])
+        year, month, day = list(map(int, call.data.split(":")[2:]))
         reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
-        reminder.date_time = str_date
+        reminder.date_time = datetime(year, month, day, 0, 0, 0, tzinfo=ZoneInfo(key=user.time_zone))
         user.status = status[5]
         reminder.save()
         user.save()
@@ -149,6 +149,7 @@ def reply_answer(message):
         bot.send_message(message.chat.id, msg, reply_markup=keyboard)
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
+            timezone.activate(ZoneInfo(key=user.time_zone))
             context = {
                 "header1": opener("my_reminders", "header1", language=user.language),
                 "header2": opener("my_reminders", "header2", language=user.language),
@@ -161,6 +162,7 @@ def reply_answer(message):
             }
             bot.send_message(message.chat.id, render_to_string("bot_app/My_reminders.html", context=context),
                              parse_mode="HTML")
+            timezone.deactivate()
         else:
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn2", language=user.language):
@@ -182,6 +184,7 @@ def reply_answer(message):
         bot.send_message(message.chat.id, render_to_string("bot_app/Rating.html", context=context),
                          parse_mode="HTML")
     elif message.text == opener("home_page", "btn4", language=user.language):
+        timezone.activate(ZoneInfo(key=user.time_zone))
         context = {
             "header": opener("settings", "header", language=user.language),
             "language": opener("settings", "language", language=user.language),
@@ -193,6 +196,7 @@ def reply_answer(message):
         }
         bot.send_message(message.chat.id, render_to_string("bot_app/Settings.html", context=context),
                          parse_mode="HTML")
+        timezone.deactivate()
     elif user.status == status[3]:
         Reminder.objects.create(id=message.message_id, user_id=message.chat.id, text=message.text)
         user.status = status[4]
@@ -205,13 +209,14 @@ def reply_answer(message):
         bot.send_message(message.chat.id, opener("enter_text", language=user.language))
     elif user.status == status[5]:
         if is_time_format(message.text):
-            hour, minute = map(int, message.text.split(":"))
+            hour, minute = list(map(int, message.text.split(":")))
             reminder = Reminder.objects.filter(user_id=message.chat.id).last()
-            reminder.date_time = reminder.date_time.replace(tzinfo=ZoneInfo(user.time_zone), hour=hour, minute=minute)
+            reminder.date_time = reminder.date_time.replace(hour=hour, minute=minute,
+                                                            tzinfo=ZoneInfo(key=user.time_zone))
             reminder.is_active = True
+            reminder.save()
             user.reminder_count = + 1
             user.status = status[3]
-            reminder.save()
             user.save()
             msg = opener("enter_time", "valid_time", language=user.language)
         else:

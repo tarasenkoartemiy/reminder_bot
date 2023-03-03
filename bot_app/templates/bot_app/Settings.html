@@ -1,6 +1,5 @@
-{% load tz %}
 {{ header }}:
 
-- {{ language }}:{% if language_value == EN %} <b>English</b> {% else %} <b>Русский</b> {% endif %}
+- {{ language }}:{% if language_value == "EN" %} <b>English</b> {% else %} <b>Русский</b> {% endif %}
 - {{ time_zone }}: <b>{{ time_zone_value }}</b>
-- {{local_time}}: <b>{{ local_time_value | timezone:time_zone_value | time:"H:i"}}</b>
+- {{local_time}}: <b>{{ local_time_value | time:"H:i" }}</b>

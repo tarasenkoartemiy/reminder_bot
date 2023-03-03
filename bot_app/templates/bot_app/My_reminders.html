@@ -10,9 +10,9 @@
 {{ header4 }}:
 {% for reminder in reminders%} {% spaceless %}
 {% if  reminder.is_active %}
-<b>{{ forloop.counter }}. {{ reminder.text }} {{ reminder.date_time|date:"SHORT_DATE_FORMAT" }} {{ preposition }} {{ reminder.date_time|time:"H:i" }}</b>
+<b>{{ forloop.counter }}. {{ reminder.text }}   {{ reminder.date_time | date:"SHORT_DATE_FORMAT" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}</b>
 {% else %}
-{{ forloop.counter }}. {{ reminder.text }}   {{ reminder.date_time|date:"SHORT_DATE_FORMAT" }} {{ preposition }} {{ reminder.date_time|time:"H:i" }}
+{{ forloop.counter }}. {{ reminder.text }}   {{ reminder.date_time | date:"SHORT_DATE_FORMAT" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}
 {% endif %}
 {% endspaceless %}
 {% endfor %}
