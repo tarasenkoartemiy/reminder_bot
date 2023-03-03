@@ -21,7 +21,8 @@
   },
   "enter_time": {
     "valid_time": "Reminder successfully recorded",
-    "bad_time": "Wrong format, try again"
+    "invalid_time": "Wrong format, try again",
+    "bad_time": "You cannot select a time that has already passed. Please try again"
   },
   "home_page": {
     "btn1": "My reminders",

@@ -110,12 +110,17 @@ def callback_inline(call):
         bot.send_message(call.message.chat.id, msg, reply_markup=keyboard)
     elif "DAY" in call.data and user.status == status[4]:
         year, month, day = list(map(int, call.data.split(":")[2:]))
-        reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
-        reminder.date_time = datetime(year, month, day, 0, 0, 0, tzinfo=ZoneInfo(key=user.time_zone))
-        user.status = status[5]
-        reminder.save()
-        user.save()
-        bot.send_message(call.message.chat.id, opener("select_date", "valid_date", language=user.language))
+        date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
+        if date.date() >= timezone.localdate(now, timezone=tz_obj):
+            reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
+            reminder.date_time = date
+            reminder.save()
+            user.status = status[5]
+            user.save()
+            msg = opener("select_date", "valid_date", language=user.language)
+        else:
+            msg = opener("select_date", "bad_date", language=user.language)
+        bot.send_message(call.message.chat.id, msg)
     elif call.data.split(":")[1] in calendar_actions:
         name, action, year, month, day = call.data.split(":")
         calendar = en_calendar if user.language == "EN" else ru_calendar
@@ -213,16 +218,19 @@ def reply_answer(message):
         if is_time_format(message.text):
             hour, minute = list(map(int, message.text.split(":")))
             reminder = Reminder.objects.filter(user_id=message.chat.id).last()
-            reminder.date_time = reminder.date_time.replace(hour=hour, minute=minute,
-                                                            tzinfo=ZoneInfo(key=user.time_zone))
-            reminder.is_active = True
-            reminder.save()
-            user.reminder_count = + 1
-            user.status = status[3]
-            user.save()
-            msg = opener("enter_time", "valid_time", language=user.language)
+            date = timezone.localtime(reminder.date_time, timezone=tz_obj).replace(hour=hour, minute=minute)
+            if date >= timezone.localtime(now, timezone=tz_obj):
+                reminder.date_time = date
+                reminder.is_active = True
+                reminder.save()
+                user.reminder_count = + 1
+                user.status = status[3]
+                user.save()
+                msg = opener("enter_time", "valid_time", language=user.language)
+            else:
+                msg = opener("enter_time", "bad_time", language=user.language)
         else:
-            msg = opener("enter_time", "bad_time", language=user.language)
+            msg = opener("enter_time", "invalid_time", language=user.language)
         bot.send_message(message.chat.id, msg)
 
 
