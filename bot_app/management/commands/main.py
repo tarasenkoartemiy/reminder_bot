@@ -81,6 +81,7 @@ def start(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     user = User.objects.get(id=call.message.chat.id)
+    tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
     if call.data in ("EN", "RU"):
         if user.language == call.data:
             keyboard = None
@@ -124,6 +125,7 @@ def callback_inline(call):
 @bot.message_handler(content_types=['text'])
 def reply_answer(message):
     user = User.objects.get(id=message.chat.id)
+    tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
     if user.status == status[1]:
         bot.send_message(message.chat.id, opener("start", "start_of_use", language="EN"))
     elif user.status == status[2]:
@@ -149,7 +151,7 @@ def reply_answer(message):
         bot.send_message(message.chat.id, msg, reply_markup=keyboard)
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
-            timezone.activate(ZoneInfo(key=user.time_zone))
+            timezone.activate(tz_obj)
             context = {
                 "header1": opener("my_reminders", "header1", language=user.language),
                 "header2": opener("my_reminders", "header2", language=user.language),
@@ -184,7 +186,7 @@ def reply_answer(message):
         bot.send_message(message.chat.id, render_to_string("bot_app/Rating.html", context=context),
                          parse_mode="HTML")
     elif message.text == opener("home_page", "btn4", language=user.language):
-        timezone.activate(ZoneInfo(key=user.time_zone))
+        timezone.activate(tz_obj)
         context = {
             "header": opener("settings", "header", language=user.language),
             "language": opener("settings", "language", language=user.language),
