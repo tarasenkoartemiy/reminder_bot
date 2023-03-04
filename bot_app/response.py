@@ -7,3 +7,12 @@ def opener(*args, **kwargs):
         for i in args:
             dict_data = dict_data[i]
     return dict_data
+
+
+def context_gen(section, language, other=None):
+    context = {subsection: message for subsection, message in opener(section, language=language).items()}
+    if other:
+        for key, value in other.items():
+            context[key] = value
+        return context
+    return context

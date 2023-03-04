@@ -6,7 +6,7 @@ from django.utils import timezone
 from bot_app.timezone import getting_coordinates, is_time_format
 from bot_app.models import User, Reminder
 from reminder_bot.settings import TOKEN
-from bot_app.response import opener
+from bot_app.response import opener, context_gen
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -158,16 +158,8 @@ def reply_answer(message):
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
             timezone.activate(tz_obj)
-            context = {
-                "header1": opener("my_reminders", "header1", language=user.language),
-                "header2": opener("my_reminders", "header2", language=user.language),
-                "header3": opener("my_reminders", "header3", language=user.language),
-                "header4": opener("my_reminders", "header4", language=user.language),
-                "reminders": reminders,
-                "example1": opener("my_reminders", "example1", language=user.language),
-                "example2": opener("my_reminders", "example2", language=user.language),
-                "preposition": opener("my_reminders", "preposition", language=user.language)
-            }
+            local_values = {"reminders": reminders}
+            context = context_gen("my_reminders", language=user.language, other=local_values)
             bot.send_message(message.chat.id, render_to_string("bot_app/My_reminders.html", context=context),
                              parse_mode="HTML")
             timezone.deactivate()
@@ -175,33 +167,21 @@ def reply_answer(message):
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn2", language=user.language):
         if notes := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=True):
-            context = {
-                "header1": opener("my_notes", "header1", language=user.language),
-                "header2": opener("my_notes", "header2", language=user.language),
-                "notes": notes
-            }
+            local_values = {"notes": notes}
+            context = context_gen("my_notes", language=user.language, other=local_values)
             bot.send_message(message.chat.id, render_to_string("bot_app/My_notes.html", context=context),
                              parse_mode="HTML")
         else:
             bot.send_message(message.chat.id, opener("my_notes", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn3", language=user.language):
-        context = {
-            "header": opener("rating", "header", language=user.language),
-            "users": User.objects.all().order_by("-reminder_count")
-        }
+        local_values = {"users": User.objects.all().order_by("-reminder_count")}
+        context = context_gen("rating", language=user.language, other=local_values)
         bot.send_message(message.chat.id, render_to_string("bot_app/Rating.html", context=context),
                          parse_mode="HTML")
     elif message.text == opener("home_page", "btn4", language=user.language):
         timezone.activate(tz_obj)
-        context = {
-            "header": opener("settings", "header", language=user.language),
-            "language": opener("settings", "language", language=user.language),
-            "language_value": user.language,
-            "time_zone": opener("settings", "time_zone", language=user.language),
-            "time_zone_value": user.time_zone,
-            "local_time": opener("settings", "local_time", language=user.language),
-            "local_time_value": now
-        }
+        local_values = {"time_zone_value": user.time_zone, "language_value": user.language, "local_time_value": now}
+        context = context_gen("settings", language=user.language, other=local_values)
         bot.send_message(message.chat.id, render_to_string("bot_app/Settings.html", context=context),
                          parse_mode="HTML")
         timezone.deactivate()
