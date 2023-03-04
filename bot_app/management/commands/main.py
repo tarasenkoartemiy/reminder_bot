@@ -24,7 +24,6 @@ class Command(BaseCommand):
         pass
 
 
-now = timezone.now()
 bot = telebot.TeleBot(TOKEN)
 en_calendar = Calendar(language=ENGLISH_LANGUAGE)
 ru_calendar = Calendar(language=RUSSIAN_LANGUAGE)
@@ -80,6 +79,7 @@ def start(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
+    now = timezone.now()
     user = User.objects.get(id=call.message.chat.id)
     tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
     if call.data in ("EN", "RU"):
@@ -129,6 +129,7 @@ def callback_inline(call):
 
 @bot.message_handler(content_types=['text'])
 def reply_answer(message):
+    now = timezone.now()
     user = User.objects.get(id=message.chat.id)
     tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
     if user.status == status[1]:
