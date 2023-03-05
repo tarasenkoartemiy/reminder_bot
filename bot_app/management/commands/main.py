@@ -80,9 +80,11 @@ def start(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     now = timezone.now()
+    cd = call.data.split(":")
+    user_id = call.message.chat.id
     user = User.objects.get(id=call.message.chat.id)
     tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
-    if call.data in ("EN", "RU"):
+    if len(cd) == 1:
         if user.language == call.data:
             keyboard = None
             msg = opener("select_language", "same_choice", language=call.data)
@@ -108,23 +110,35 @@ def callback_inline(call):
             except ApiTelegramException:
                 pass
         bot.send_message(call.message.chat.id, msg, reply_markup=keyboard)
-    elif "DAY" in call.data and user.status == status[4]:
-        year, month, day = list(map(int, call.data.split(":")[2:]))
-        date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
-        if date.date() >= timezone.localdate(now, timezone=tz_obj):
-            reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
-            reminder.date_time = date
-            reminder.save()
-            user.status = status[5]
-            user.save()
-            msg = opener("select_date", "valid_date", language=user.language)
+    elif len(cd) == 2:
+        if cd[0] == "R":
+            pass
         else:
-            msg = opener("select_date", "bad_date", language=user.language)
-        bot.send_message(call.message.chat.id, msg)
-    elif call.data.split(":")[1] in calendar_actions:
-        name, action, year, month, day = call.data.split(":")
-        calendar = en_calendar if user.language == "EN" else ru_calendar
-        calendar.calendar_query_handler(bot=bot, call=call, name=name, action=action, year=year, month=month, day=day)
+            pass
+    elif len(cd) == 3:
+        if cd[0] == "R":
+            pass
+        else:
+            pass
+    elif len(cd) == 5:
+        if "DAY" in cd and user.status == status[4]:
+            year, month, day = map(int, cd[2:])
+            date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
+            if date.date() >= timezone.localdate(now, timezone=tz_obj):
+                reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
+                reminder.date_time = date
+                reminder.save()
+                user.status = status[5]
+                user.save()
+                msg = opener("select_date", "valid_date", language=user.language)
+            else:
+                msg = opener("select_date", "bad_date", language=user.language)
+            bot.send_message(call.message.chat.id, msg)
+        else:
+            name, action, year, month, day = cd
+            calendar = en_calendar if user.language == "EN" else ru_calendar
+            calendar.calendar_query_handler(bot=bot, call=call, name=name, action=action, year=year, month=month,
+                                            day=day)
 
 
 @bot.message_handler(content_types=['text'])
@@ -204,7 +218,7 @@ def reply_answer(message):
                 reminder.date_time = date
                 reminder.is_active = True
                 reminder.save()
-                user.reminder_count = + 1
+                user.reminder_count += 1
                 user.status = status[3]
                 user.save()
                 msg = opener("enter_time", "valid_time", language=user.language)
