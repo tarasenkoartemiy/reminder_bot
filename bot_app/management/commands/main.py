@@ -27,12 +27,21 @@ class Command(BaseCommand):
 bot = telebot.TeleBot(TOKEN)
 en_calendar = Calendar(language=ENGLISH_LANGUAGE)
 ru_calendar = Calendar(language=RUSSIAN_LANGUAGE)
-status = {1: "select_language", 2: "enter_city", 3: "enter_text", 4: "select_date", 5: "enter_time"}
+status = {1: "select_language",
+          2: "enter_city",
+          3: "enter_text",
+          4: "select_date",
+          5: "enter_time",
+          6: "change_reminder_text",
+          7: "change_reminder_date",
+          8: "change_reminder_time",
+          9: "change_note_text",
+          10: "add_note_datetime"}
 calendar_actions = ("IGNORE", "PREVIOUS-MONTH", "NEXT-MONTH", "MONTHS", "MONTH", "CANCEL")
 
 
-def reply_buttons(*args):
-    buttons = [types.KeyboardButton(i) for i in args]
+def reply_buttons(section, language):
+    buttons = [types.KeyboardButton(value) for value in opener(section, language=language).values()]
 
     def reply_keyboard(**kwargs):
         return types.ReplyKeyboardMarkup(**kwargs).add(*buttons)
@@ -40,8 +49,18 @@ def reply_buttons(*args):
     return reply_keyboard
 
 
-def inline_callback_buttons(*args):
-    buttons = [types.InlineKeyboardButton(i, callback_data=j) for i, j in args]
+def inline_callback_buttons(section, language, prefix, number=None, active=False):
+    buttons = []
+    if number:
+        for key, value in opener(section, language=language).items():
+            if key == "DEACTIVATE" and not active:
+                continue
+            elif key == "ACTIVATE" and active:
+                continue
+            buttons.append(types.InlineKeyboardButton(value, callback_data=f"{prefix}:{key}:{number}"))
+    else:
+        for key, value in opener(section, language=language).items():
+            buttons.append(types.InlineKeyboardButton(value, callback_data=f"{prefix}:{key}"))
 
     def inline_callback_keyboard(**kwargs):
         return types.InlineKeyboardMarkup(**kwargs).add(*buttons)
@@ -56,8 +75,7 @@ def start(message):
         if user.time_zone:
             user.status = status[3]
             user.save()
-            keyboard = reply_buttons(*opener("home_page", language=user.language).values())(resize_keyboard=True,
-                                                                                            row_width=2)
+            keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
             msg = opener("start", "home_page", language=user.language)
         else:
             keyboard = None
@@ -74,66 +92,130 @@ def start(message):
                             status=status[1],
                             )
         bot.send_message(message.chat.id, opener("start", "start_of_use", language="EN"),
-                         reply_markup=inline_callback_buttons(("English", "EN"), ("Русский", "RU"))())
+                         reply_markup=inline_callback_buttons("language_buttons", language="EN", prefix="LANGUAGE")())
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     now = timezone.now()
     cd = call.data.split(":")
+    prefix, action = cd[:2]
+    msg_id = call.message.message_id
     user_id = call.message.chat.id
     user = User.objects.get(id=call.message.chat.id)
     tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
-    if len(cd) == 1:
-        if user.language == call.data:
-            keyboard = None
-            msg = opener("select_language", "same_choice", language=call.data)
+    reminders = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)
+    keyboard = None
+    if prefix == "LANGUAGE":
+        section = "select_language"
+        if user.language == action:
+            subsection = "same_choice"
         else:
+            subsection = "another_choice"
             if user.time_zone:
-                keyboard = reply_buttons(*opener("home_page", language=call.data).values())(resize_keyboard=True,
-                                                                                            row_width=2)
-                msg = opener("select_language", "another_choice", language=call.data)
-            elif user.language:
-                keyboard = None
-                msg = opener("select_language", "another_choice", language=call.data)
+                keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
             else:
-                keyboard = None
-                msg = opener("select_language", "first_choice", language=call.data)
+                subsection = "first_choice"
                 user.status = status[2]
-            user.language = call.data
+            user.language = action
             user.save()
             try:
+                buttons = inline_callback_buttons("language_buttons", language=user.language, prefix="LANGUAGE")
                 bot.edit_message_text(text=opener("start", "start_of_use", language=user.language),
-                                      chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id,
-                                      reply_markup=inline_callback_buttons(("English", "EN"), ("Русский", "RU"))())
+                                      chat_id=user_id, message_id=msg_id, reply_markup=buttons())
             except ApiTelegramException:
                 pass
-        bot.send_message(call.message.chat.id, msg, reply_markup=keyboard)
-    elif len(cd) == 2:
-        if cd[0] == "R":
-            pass
-        else:
-            pass
-    elif len(cd) == 3:
-        if cd[0] == "R":
-            pass
-        else:
-            pass
-    elif len(cd) == 5:
-        if "DAY" in cd and user.status == status[4]:
-            year, month, day = map(int, cd[2:])
-            date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
-            if date.date() >= timezone.localdate(now, timezone=tz_obj):
-                reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
-                reminder.date_time = date
+        message = opener(section, subsection, language=action)
+        bot.send_message(user_id, message, reply_markup=keyboard)
+    elif prefix == "REMINDER":
+        timezone.activate(tz_obj)
+        number = call.data.split(":")[2]
+        index = int(number) - 1
+        reminder = reminders[index]
+        pm = "HTML"
+        if action in ("NUMBER", "DEACTIVATE", "ACTIVATE", "CHANGE", "CHANGE-BACK"):
+            buttons_section = "reminder_change_buttons" if action == "CHANGE" else "reminder_buttons"
+            if action in ("DEACTIVATE", "ACTIVATE"):
+                reminder.is_active = False if action == "DEACTIVATE" else True
                 reminder.save()
-                user.status = status[5]
-                user.save()
-                msg = opener("select_date", "valid_date", language=user.language)
+                reminder = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)[index]
+            local_values = {"reminder": reminder}
+            context = context_gen("reminder", language=user.language, other=local_values)
+            new_msg = render_to_string("bot_app/Reminder.html", context=context)
+            buttons = inline_callback_buttons(buttons_section, language=user.language, prefix=prefix, number=number,
+                                              active=reminder.is_active)
+            keyboard = buttons(row_width=3)
+        elif action in ("DELETE", "BACK"):
+            if action == "DELETE":
+                reminder.delete()
+                reminders = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)
+            if not reminders:
+                pm = None
+                new_msg = opener("my_reminders", "empty_list", language=user.language)
             else:
-                msg = opener("select_date", "bad_date", language=user.language)
-            bot.send_message(call.message.chat.id, msg)
+                local_values = {"reminders": reminders}
+                context = context_gen("my_reminders", language=user.language, other=local_values)
+                new_msg = render_to_string("bot_app/My_reminders.html", context=context)
+                buttons = (types.InlineKeyboardButton(str(i), callback_data=f"REMINDER:NUMBER:{i}") for i in
+                           range(1, len(reminders) + 1))
+                keyboard = types.InlineKeyboardMarkup(row_width=3).add(*buttons)
+        elif action in ("CHANGE-TEXT", "CHANGE-DATE", "CHANGE-TIME"):
+            timezone.deactivate()
+            pm = None
+            user.change_number = number
+            if action == "CHANGE-TEXT":
+                new_status = status[6]
+                message = "Пожалуйста, введите новый текст"
+            elif action == "CHANGE-DATE":
+                new_status = status[7]
+                message = "Пожалуйста, выберите новую дату"
+                calendar = en_calendar if user.language == "EN" else ru_calendar
+                keyboard = calendar.create_calendar(name="CALENDAR", month=now.month, year=now.year)
+            elif action == "CHANGE-TIME":
+                message = "Пожалуйста, укажите новое время"
+                new_status = status[8]
+            user.status = new_status
+            user.save()
+            new_msg = message
+        bot.edit_message_text(text=new_msg, chat_id=user_id, message_id=msg_id, parse_mode=pm, reply_markup=keyboard)
+        timezone.deactivate()
+    elif prefix == "CALENDAR":
+        if action == "DAY":
+            year, month, day = map(int, cd[2:])
+            trigger = False
+            if user.status == status[4]:
+                reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
+                date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
+                if date.date() >= timezone.localdate(now, timezone=tz_obj):
+                    reminder.date_time = date
+                    user.status = status[5]
+                    trigger = True
+            elif user.status == status[7]:
+                reminder = reminders[user.change_number - 1]
+                date = timezone.localtime(reminder.date_time, timezone=tz_obj).replace(year=year, month=month, day=day)
+                if date >= timezone.localtime(now, timezone=tz_obj):
+                    reminder.date_time = date
+                    user.status = status[8]
+                    trigger = True
+            reminder.save()
+            user.save()
+            if trigger:
+                subsection = "valid_date"
+            else:
+                subsection = "bad_date"
+                calendar = en_calendar if user.language == "EN" else ru_calendar
+                keyboard = calendar.create_calendar(name="CALENDAR", month=now.month, year=now.year)
+            msg = opener("select_date", subsection, language=user.language)
+            try:
+                bot.edit_message_text(text=msg, chat_id=user_id, message_id=msg_id, reply_markup=keyboard)
+            except ApiTelegramException:
+                pass
+        elif action == "CANCEL":
+            user.status = status[3]
+            user.change_number = None
+            user.save
+            msg = opener("start", "home_page", language=user.language)
+            bot.edit_message_text(text=msg, chat_id=user_id, message_id=msg_id)
         else:
             name, action, year, month, day = cd
             calendar = en_calendar if user.language == "EN" else ru_calendar
@@ -157,8 +239,7 @@ def reply_answer(message):
             user.time_zone = time_zone
             user.status = status[3]
             user.save()
-            keyboard = reply_buttons(*opener("home_page", language=user.language).values())(resize_keyboard=True,
-                                                                                            row_width=2)
+            keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
             msg = opener("enter_city", "success_response", language=user.language)
         # time_zone = None when coordinates = True. In other words, the second api does not work
         # OR coordinates = None. In other words, the first api does not work
@@ -174,8 +255,11 @@ def reply_answer(message):
             timezone.activate(tz_obj)
             local_values = {"reminders": reminders}
             context = context_gen("my_reminders", language=user.language, other=local_values)
+            buttons = (types.InlineKeyboardButton(str(i), callback_data=f"REMINDER:NUMBER:{i}") for i in
+                       range(1, len(reminders) + 1))
+            keyboard = types.InlineKeyboardMarkup(row_width=3).add(*buttons)
             bot.send_message(message.chat.id, render_to_string("bot_app/My_reminders.html", context=context),
-                             parse_mode="HTML")
+                             parse_mode="HTML", reply_markup=keyboard)
             timezone.deactivate()
         else:
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
@@ -183,8 +267,11 @@ def reply_answer(message):
         if notes := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=True):
             local_values = {"notes": notes}
             context = context_gen("my_notes", language=user.language, other=local_values)
+            buttons = (types.InlineKeyboardButton(str(i), callback_data=f"NOTE:NUMBER:{i}") for i in
+                       range(1, len(notes) + 1))
+            keyboard = types.InlineKeyboardMarkup(row_width=3).add(*buttons)
             bot.send_message(message.chat.id, render_to_string("bot_app/My_notes.html", context=context),
-                             parse_mode="HTML")
+                             parse_mode="HTML", reply_markup=keyboard)
         else:
             bot.send_message(message.chat.id, opener("my_notes", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn3", language=user.language):
@@ -205,8 +292,7 @@ def reply_answer(message):
         user.save()
         calendar = en_calendar if user.language == "EN" else ru_calendar
         bot.send_message(message.chat.id, opener("enter_text", language=user.language),
-                         reply_markup=calendar.create_calendar(month=now.month,
-                                                               year=now.year))
+                         reply_markup=calendar.create_calendar(name="CALENDAR", month=now.month, year=now.year))
     elif user.status == status[4]:
         bot.send_message(message.chat.id, opener("enter_text", language=user.language))
     elif user.status == status[5]:
