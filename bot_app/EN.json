@@ -9,6 +9,10 @@
     "same_choice": "This language has already been chosen by you",
     "another_choice": "Your language has been successfully changed"
   },
+  "language_buttons": {
+    "RU": "Russian",
+    "EN": "English"
+  },
   "enter_city": {
     "success_response": "Cool, now I know a little more about you",
     "bad_response": "The service I'm using for this operation is not working right now",
@@ -47,12 +51,34 @@
 
   },
   "rating": {
-    "header": "Rating of users by the number of reminders created"
+    "header": "Top 10 users by number of points",
+    "intro": "uses a reminder bot with"
   },
   "settings": {
     "header": "Your settings",
     "language": "language",
     "time_zone": "time zone",
     "local_time": "local time"
+  },
+  "reminder": {
+    "header1": "Your reminder",
+    "header2": "Reminder send time",
+    "header3": "Status",
+    "preposition": "at",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "reminder_buttons": {
+    "ACTIVATE": "Activate",
+    "DEACTIVATE": "Deactivate",
+    "CHANGE": "Change",
+    "DELETE": "Delete",
+    "BACK": "Back"
+  },
+  "reminder_change_buttons": {
+    "CHANGE-TEXT": "Change text",
+    "CHANGE-DATE": "Change date",
+    "CHANGE-TIME": "Change time",
+    "CHANGE-BACK": "Back"
   }
 }

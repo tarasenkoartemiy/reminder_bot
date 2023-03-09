@@ -47,12 +47,38 @@
 
   },
   "rating": {
-    "header": "Рейтинг пользователей по количеству созданных напоминаний"
+    "header": "Топ 10 пользователей по количеству очков",
+    "intro": "использует бота-напоминалку с"
   },
   "settings": {
     "header": "Ваши настройки",
     "language": "язык",
     "time_zone": "часовой пояс",
     "local_time": "локальное время"
+  },
+  "reminder": {
+    "header1": "Ваше напоминание",
+    "header2": "Время отправки напоминания",
+    "header3": "Статус",
+    "preposition": "в",
+    "active": "Активно",
+    "inactive": "Неактивно"
+  },
+  "language_buttons": {
+    "RU": "Русский",
+    "EN": "Английский"
+  },
+  "reminder_buttons": {
+    "ACTIVATE": "Активировать",
+    "DEACTIVATE": "Деактивировать",
+    "CHANGE": "Изменить",
+    "DELETE": "Удалить",
+    "BACK": "Назад"
+  },
+  "reminder_change_buttons": {
+    "CHANGE-TEXT": "Изменить текст",
+    "CHANGE-DATE": "Изменить дату",
+    "CHANGE-TIME": "Изменить время",
+    "CHANGE-BACK": "Назад"
   }
 }
