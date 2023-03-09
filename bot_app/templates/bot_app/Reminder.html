@@ -1,0 +1,8 @@
+<b>{{ header1 }}:</b>
+{{ reminder.reminder_text }}
+
+<b>{{ header2 }}:</b>
+{{ reminder.date_time | date:"d.m.y" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}
+
+<b>{{ header3 }}:</b>
+{% if reminder.is_active %} {{ active }} {% else %} {{ inactive }} {% endif %}
