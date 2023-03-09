@@ -163,10 +163,14 @@ def callback_inline(call):
             if action in ("DEACTIVATE", "ACTIVATE"):
                 if action == "DEACTIVATE":
                     reminder.is_active = False
-                    # scheduler.pause_job()
+                    scheduler.remove_job(job_id=str(reminder.reminder_id))
                 else:
                     reminder.is_active = True
-                    # scheduler.resume_job()
+                    schedule_reminder(reminder_date=reminder.date_time,
+                                      user_id=user_id,
+                                      message=reminder.reminder_text,
+                                      reminder=reminder,
+                                      job_id=str(reminder.reminder_id))
                 reminder.save()
                 reminder = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)[index]
             local_values = {"reminder": reminder}
