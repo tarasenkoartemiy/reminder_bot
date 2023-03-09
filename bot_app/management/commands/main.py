@@ -53,6 +53,9 @@ def remind(user_id, message, reminder):
     bot.send_message(user_id, message)
     reminder.is_active = None
     reminder.save()
+    user = User.objects.get(id=reminder.user_id)
+    user.score += 10
+    user.save()
     delete_date = reminder.date_time + timedelta(days=14)
     scheduler.add_job(delete_reminder, trigger='date', run_date=delete_date, args=(reminder,))
 
@@ -131,14 +134,15 @@ def callback_inline(call):
         if user.language == action:
             subsection = "same_choice"
         else:
-            subsection = "another_choice"
+            user.language = action
+            user.save()
             if user.time_zone:
+                subsection = "another_choice"
                 keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
             else:
                 subsection = "first_choice"
                 user.status = status["enter_city"]
-            user.language = action
-            user.save()
+                user.save()
             try:
                 buttons = inline_callback_buttons("language_buttons", language=user.language, prefix="LANGUAGE")
                 bot.edit_message_text(text=opener("start", "start_of_use", language=user.language),
