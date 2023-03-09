@@ -4,17 +4,20 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from bot_app.timezone import getting_coordinates, is_time_format
-from bot_app.models import User, Reminder
+from bot_app.models import User, Reminder, Note
 from reminder_bot.settings import TOKEN
 from bot_app.response import opener, context_gen
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from pytz import utc
 
 from telebot_calendar import Calendar, ENGLISH_LANGUAGE, RUSSIAN_LANGUAGE
 from telebot.apihelper import ApiTelegramException
 from telebot import types
 import telebot
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
 class Command(BaseCommand):
@@ -25,6 +28,8 @@ class Command(BaseCommand):
 
 
 bot = telebot.TeleBot(TOKEN)
+scheduler = BackgroundScheduler()
+scheduler.configure(timezone=utc)
 en_calendar = Calendar(language=ENGLISH_LANGUAGE)
 ru_calendar = Calendar(language=RUSSIAN_LANGUAGE)
 status = {1: "select_language",
@@ -38,6 +43,22 @@ status = {1: "select_language",
           9: "change_note_text",
           10: "add_note_datetime"}
 calendar_actions = ("IGNORE", "PREVIOUS-MONTH", "NEXT-MONTH", "MONTHS", "MONTH", "CANCEL")
+
+
+def schedule_reminder(reminder_date, user_id, message, reminder, job_id):
+    scheduler.add_job(remind, trigger='date', run_date=reminder_date, args=(user_id, message, reminder), id=job_id)
+
+
+def remind(user_id, message, reminder):
+    bot.send_message(user_id, message)
+    reminder.is_active = None
+    reminder.save()
+    delete_date = reminder.date_time + timedelta(days=14)
+    scheduler.add_job(delete_reminder, trigger='date', run_date=delete_date, args=(reminder,))
+
+
+def delete_reminder(reminder):
+    reminder.delete()
 
 
 def reply_buttons(section, language):
@@ -104,7 +125,6 @@ def callback_inline(call):
     user_id = call.message.chat.id
     user = User.objects.get(id=call.message.chat.id)
     tz_obj = ZoneInfo(key=user.time_zone) if user.time_zone else None
-    reminders = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)
     keyboard = None
     if prefix == "LANGUAGE":
         section = "select_language"
@@ -131,12 +151,18 @@ def callback_inline(call):
         timezone.activate(tz_obj)
         number = call.data.split(":")[2]
         index = int(number) - 1
+        reminders = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)
         reminder = reminders[index]
         pm = "HTML"
         if action in ("NUMBER", "DEACTIVATE", "ACTIVATE", "CHANGE", "CHANGE-BACK"):
             buttons_section = "reminder_change_buttons" if action == "CHANGE" else "reminder_buttons"
             if action in ("DEACTIVATE", "ACTIVATE"):
-                reminder.is_active = False if action == "DEACTIVATE" else True
+                if action == "DEACTIVATE":
+                    reminder.is_active = False
+                    # scheduler.pause_job()
+                else:
+                    reminder.is_active = True
+                    # scheduler.resume_job()
                 reminder.save()
                 reminder = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)[index]
             local_values = {"reminder": reminder}
@@ -184,20 +210,21 @@ def callback_inline(call):
             year, month, day = map(int, cd[2:])
             trigger = False
             if user.status == status[4]:
-                reminder = Reminder.objects.filter(user_id=call.message.chat.id).last()
+                note = Note.objects.filter(user_id=call.message.chat.id).last()
                 date = datetime(year, month, day, 0, 0, 0, tzinfo=tz_obj)
                 if date.date() >= timezone.localdate(now, timezone=tz_obj):
-                    reminder.date_time = date
+                    note.possible_date = date
+                    note.save()
                     user.status = status[5]
                     trigger = True
             elif user.status == status[7]:
-                reminder = reminders[user.change_number - 1]
+                reminder = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)[user.change_number - 1]
                 date = timezone.localtime(reminder.date_time, timezone=tz_obj).replace(year=year, month=month, day=day)
                 if date >= timezone.localtime(now, timezone=tz_obj):
                     reminder.date_time = date
+                    reminder.save()
                     user.status = status[8]
                     trigger = True
-            reminder.save()
             user.save()
             if trigger:
                 subsection = "valid_date"
@@ -264,7 +291,7 @@ def reply_answer(message):
         else:
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn2", language=user.language):
-        if notes := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=True):
+        if notes := Note.objects.filter(user_id=message.chat.id):
             local_values = {"notes": notes}
             context = context_gen("my_notes", language=user.language, other=local_values)
             buttons = (types.InlineKeyboardButton(str(i), callback_data=f"NOTE:NUMBER:{i}") for i in
@@ -287,7 +314,7 @@ def reply_answer(message):
                          parse_mode="HTML")
         timezone.deactivate()
     elif user.status == status[3]:
-        Reminder.objects.create(id=message.message_id, user_id=message.chat.id, text=message.text)
+        Note.objects.create(note_id=message.message_id, user_id=message.chat.id, note_text=message.text)
         user.status = status[4]
         user.save()
         calendar = en_calendar if user.language == "EN" else ru_calendar
@@ -298,15 +325,23 @@ def reply_answer(message):
     elif user.status == status[5]:
         if is_time_format(message.text):
             hour, minute = list(map(int, message.text.split(":")))
-            reminder = Reminder.objects.filter(user_id=message.chat.id).last()
-            date = timezone.localtime(reminder.date_time, timezone=tz_obj).replace(hour=hour, minute=minute)
+            note = Note.objects.filter(user_id=message.chat.id).last()
+            date = timezone.localtime(note.possible_date, timezone=tz_obj).replace(hour=hour, minute=minute)
             if date >= timezone.localtime(now, timezone=tz_obj):
-                reminder.date_time = date
-                reminder.is_active = True
-                reminder.save()
+                reminder = Reminder.objects.create(reminder_id=note.note_id,
+                                                   user_id=note.user_id,
+                                                   reminder_text=note.note_text,
+                                                   date_time=date,
+                                                   is_active=True)
+                note.delete()
                 user.reminder_count += 1
                 user.status = status[3]
                 user.save()
+                schedule_reminder(reminder_date=reminder.date_time,
+                                  user_id=message.chat.id,
+                                  message=reminder.reminder_text,
+                                  reminder=reminder,
+                                  job_id=str(message.message_id))
                 msg = opener("enter_time", "valid_time", language=user.language)
             else:
                 msg = opener("enter_time", "bad_time", language=user.language)
@@ -315,4 +350,5 @@ def reply_answer(message):
         bot.send_message(message.chat.id, msg)
 
 
+scheduler.start()
 bot.infinity_polling()
