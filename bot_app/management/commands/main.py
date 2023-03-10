@@ -64,6 +64,20 @@ def delete_reminder(reminder):
     reminder.delete()
 
 
+def check_inactive_reminders():
+    for reminder in Reminder.objects.filter(is_active=False):
+        if reminder.date_time < timezone.now():
+            user = User.objects.get(id=reminder.user_id)
+            note = Note.objects.create(note_id=reminder.reminder_id,
+                                       user_id=reminder.user_id,
+                                       note_text=reminder.reminder_text)
+            delete_reminder(reminder)
+            local_values = {"note": note}
+            context = context_gen("inactive_reminder", language=user.language, other=local_values)
+            message = render_to_string("bot_app/Inactive_reminder.html", context=context)
+            bot.send_message(note.user_id, message, parse_mode="HTML")
+
+
 def reply_buttons(section, language):
     buttons = [types.KeyboardButton(value) for value in opener(section, language=language).values()]
 
@@ -173,7 +187,8 @@ def callback_inline(call):
                                       job_id=str(reminder.reminder_id))
                 reminder.save()
                 reminder = Reminder.objects.filter(user_id=user_id, is_active__isnull=False)[index]
-            local_values = {"reminder": reminder}
+            local_values = {"reminder": reminder,
+                            "relevance": opener("relevance",language=user.language)}
             context = context_gen("reminder", language=user.language, other=local_values)
             new_msg = render_to_string("bot_app/Reminder.html", context=context)
             buttons = inline_callback_buttons(buttons_section, language=user.language, prefix=prefix, number=number,
@@ -187,7 +202,8 @@ def callback_inline(call):
                 pm = None
                 new_msg = opener("my_reminders", "empty_list", language=user.language)
             else:
-                local_values = {"reminders": reminders}
+                local_values = {"reminders": reminders,
+                                "relevance": opener("relevance",language=user.language)}
                 context = context_gen("my_reminders", language=user.language, other=local_values)
                 new_msg = render_to_string("bot_app/My_reminders.html", context=context)
                 buttons = (types.InlineKeyboardButton(str(i), callback_data=f"REMINDER:NUMBER:{i}") for i in
@@ -281,7 +297,8 @@ def reply_answer(message):
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
             timezone.activate(tz_obj)
-            local_values = {"reminders": reminders}
+            local_values = {"reminders": reminders,
+                            "relevance": opener("relevance",language=user.language)}
             context = context_gen("my_reminders", language=user.language, other=local_values)
             buttons = (types.InlineKeyboardButton(str(i), callback_data=f"REMINDER:NUMBER:{i}") for i in
                        range(1, len(reminders) + 1))
@@ -293,7 +310,8 @@ def reply_answer(message):
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn2", language=user.language):
         if notes := Note.objects.filter(user_id=message.chat.id):
-            local_values = {"notes": notes}
+            local_values = {"notes": notes,
+                            "relevance": opener("relevance",language=user.language)}
             context = context_gen("my_notes", language=user.language, other=local_values)
             buttons = (types.InlineKeyboardButton(str(i), callback_data=f"NOTE:NUMBER:{i}") for i in
                        range(1, len(notes) + 1))
@@ -303,13 +321,17 @@ def reply_answer(message):
         else:
             bot.send_message(message.chat.id, opener("my_notes", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn3", language=user.language):
-        local_values = {"users": User.objects.all().order_by("-reminder_count")}
+        local_values = {"users": User.objects.all().order_by("-score")[:10],
+                        "relevance": opener("relevance",language=user.language)}
         context = context_gen("rating", language=user.language, other=local_values)
         bot.send_message(message.chat.id, render_to_string("bot_app/Rating.html", context=context),
                          parse_mode="HTML")
     elif message.text == opener("home_page", "btn4", language=user.language):
         timezone.activate(tz_obj)
-        local_values = {"time_zone_value": user.time_zone, "language_value": user.language, "local_time_value": now}
+        local_values = {"time_zone_value": user.time_zone,
+                        "language_value": user.language,
+                        "local_time_value": now,
+                        "relevance": opener("relevance",language=user.language)}
         context = context_gen("settings", language=user.language, other=local_values)
         bot.send_message(message.chat.id, render_to_string("bot_app/Settings.html", context=context),
                          parse_mode="HTML")
@@ -351,5 +373,6 @@ def reply_answer(message):
         bot.send_message(message.chat.id, msg)
 
 
+scheduler.add_job(check_inactive_reminders, 'interval', seconds=1)
 scheduler.start()
 bot.infinity_polling()
