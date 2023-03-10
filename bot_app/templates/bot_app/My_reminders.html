@@ -12,7 +12,8 @@
 {% if  reminder.is_active %}
 <b>{{ forloop.counter }}. {{ reminder.reminder_text }}   {{ reminder.date_time | date:"d.m.y" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}</b>
 {% else %}
-{{ forloop.counter }}. {{ reminder.text }}   {{ reminder.date_time | date:"d.m.y" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}
+{{ forloop.counter }}. {{ reminder.reminder_text }}   {{ reminder.date_time | date:"d.m.y" }} {{ preposition }} {{ reminder.date_time | time:"H:i" }}
 {% endif %}
 {% endspaceless %}
 {% endfor %}
+*{{ relevance }}
