@@ -14,7 +14,7 @@
     "EN": "English"
   },
   "enter_city": {
-    "success_response": "Cool, now I know a little more about you",
+    "success_response": "Cool, now I know a little more about you! To create a reminder or note, just write it",
     "bad_response": "The service I'm using for this operation is not working right now",
     "bad_city": "I don't know this city, try again"
   },
@@ -84,5 +84,6 @@
     "CHANGE-DATE": "Change date",
     "CHANGE-TIME": "Change time",
     "CHANGE-BACK": "Back"
-  }
+  },
+  "relevance": "Relevant at the time of formation"
 }
