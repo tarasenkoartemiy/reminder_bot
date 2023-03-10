@@ -297,7 +297,8 @@ def reply_answer(message):
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
             timezone.activate(tz_obj)
-            local_values = {"reminders": reminders}
+            local_values = {"reminders": reminders,
+                            "relevance": opener("relevance",language=user.language)}
             context = context_gen("my_reminders", language=user.language, other=local_values)
             buttons = (types.InlineKeyboardButton(str(i), callback_data=f"REMINDER:NUMBER:{i}") for i in
                        range(1, len(reminders) + 1))
@@ -309,7 +310,8 @@ def reply_answer(message):
             bot.send_message(message.chat.id, opener("my_reminders", "empty_list", language=user.language))
     elif message.text == opener("home_page", "btn2", language=user.language):
         if notes := Note.objects.filter(user_id=message.chat.id):
-            local_values = {"notes": notes}
+            local_values = {"notes": notes,
+                            "relevance": opener("relevance",language=user.language)}
             context = context_gen("my_notes", language=user.language, other=local_values)
             buttons = (types.InlineKeyboardButton(str(i), callback_data=f"NOTE:NUMBER:{i}") for i in
                        range(1, len(notes) + 1))
