@@ -68,6 +68,10 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "inactive_reminder": {
+    "header1": "Your reminder is no longer relevant, it has been sent to notes",
+    "header2": "Reminder text"
+  },
   "reminder_buttons": {
     "ACTIVATE": "Activate",
     "DEACTIVATE": "Deactivate",
