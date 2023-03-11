@@ -14,7 +14,16 @@
     "EN": "English"
   },
   "enter_city": {
-    "success_response": "Cool, now I know a little more about you! To create a reminder or note, just write it",
+    "success_response": {
+      "header1": "Cool, now I know a little more about you!",
+      "header2": "To create a reminder",
+      "header3": "To create a note",
+      "1_reminder_step": "Write a reminder without date and time",
+      "2_reminder_step": "Select a reminder date from the calendar",
+      "3_reminder_step": "Write reminder time",
+      "1_note_step": "Write a note",
+      "2_note_step": "Click CANCEL on the calendar"
+    },
     "bad_response": "The service I'm using for this operation is not working right now",
     "bad_city": "I don't know this city, try again"
   },

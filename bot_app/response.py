@@ -9,8 +9,8 @@ def opener(*args, **kwargs):
     return dict_data
 
 
-def context_gen(section, language, other=None):
-    context = {subsection: message for subsection, message in opener(section, language=language).items()}
+def context_gen(*args, language, other=None):
+    context = {subsection: message for subsection, message in opener(*args, language=language).items()}
     if other:
         for key, value in other.items():
             context[key] = value

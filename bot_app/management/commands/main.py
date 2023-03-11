@@ -234,7 +234,8 @@ def callback_inline(call):
             except ApiTelegramException:
                 pass
         try:
-            bot.edit_message_text(text=new_msg, chat_id=user_id, message_id=msg_id, parse_mode=pm, reply_markup=keyboard)
+            bot.edit_message_text(text=new_msg, chat_id=user_id, message_id=msg_id, parse_mode=pm,
+                                  reply_markup=keyboard)
         except ApiTelegramException:
             bot.send_message(user_id, message)
         timezone.deactivate()
@@ -302,17 +303,19 @@ def reply_answer(message):
             user.time_zone = time_zone
             user.status = status["enter_text"]
             user.save()
+            pm = "HTML"
             keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
-            msg = opener("enter_city", "success_response", language=user.language)
+            context = context_gen("enter_city", "success_response", language=user.language)
+            msg = render_to_string("bot_app/How_to_create.html", context=context)
         # time_zone = None when coordinates = True. In other words, the second api does not work
         # OR coordinates = None. In other words, the first api does not work
         elif time_zone is None:
-            keyboard = None
+            keyboard = pm = None
             msg = opener("enter_city", "bad_response", language=user.language)
         else:
             msg = opener("enter_city", "bad_city", language=user.language)
-            keyboard = None
-        bot.send_message(message.chat.id, msg, reply_markup=keyboard)
+            keyboard = pm = None
+        bot.send_message(message.chat.id, msg, parse_mode=pm, reply_markup=keyboard)
     elif message.text == opener("home_page", "btn1", language=user.language):
         if reminders := Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False):
             timezone.activate(tz_obj)
