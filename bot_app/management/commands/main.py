@@ -279,7 +279,7 @@ def callback_inline(call):
                 bot.delete_message(chat_id=user_id, message_id=msg_id)
             except ApiTelegramException:
                 pass
-            msg = opener("start", "home_page", language=user.language)
+            msg = opener("select_date", "cancel", language=user.language)
             bot.send_message(user_id, msg)
         else:
             name, action, year, month, day = cd

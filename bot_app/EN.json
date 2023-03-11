@@ -29,7 +29,8 @@
   "enter_text": "Please select a reminder date",
   "select_date": {
     "valid_date": "Please write the time in HH:MM format",
-    "bad_date": "You cannot select a date that has already passed. Please try again"
+    "bad_date": "You cannot select a date that has already passed. Please try again",
+    "cancel": "The note was successfully recorded"
   },
   "enter_time": {
     "valid_time": "Reminder successfully recorded",
