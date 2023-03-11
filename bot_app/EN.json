@@ -77,6 +77,9 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "change_reminder": {
+    "change_text": "Your reminder has been successfully changed"
+  },
   "inactive_reminder": {
     "header1": "Your reminder is no longer relevant, it has been sent to notes",
     "header2": "Reminder text"
@@ -94,5 +97,9 @@
     "CHANGE-TIME": "Change time",
     "CHANGE-BACK": "Back"
   },
-  "relevance": "Relevant at the time of formation"
+  "relevance": "Relevant at the time of formation",
+  "warning": {
+    "reminder_or_note": "These actions are available only in the nearest window",
+    "calendar": "Date selection is only available in the nearest calendar"
+  }
 }

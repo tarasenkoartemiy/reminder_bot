@@ -18,22 +18,35 @@ class User(models.Model):
         return f"| USERNAME:{self.username} | USER_ID:{self.id} |"
 
 
+class LastMessages(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    reminder_message_id = models.IntegerField(default=None, null=True)
+    note_message_id = models.IntegerField(default=None, null=True)
+    calendar_id = models.IntegerField(default=None, null=True)
+
+    def __str__(self):
+        return (f"| USER_ID:{self.user_id} "
+                f"| REMINDER_MESSAGE_ID:{self.reminder_list_id} "
+                f"| NOTE_MESSAGE_ID:{self.note_list_id} "
+                f"| CALENDAR_ID:{self.calendar_id} |")
+
+
 class Reminder(models.Model):
-    reminder_id = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    reminder_text = models.TextField()
+    text = models.TextField()
     date_time = models.DateTimeField(default=None, null=True)
     is_active = models.BooleanField(null=True)
 
     def __str__(self):
-        return f"| REMINDER:{self.reminder_text} | REMINDER_ID:{self.reminder_id} | USER_ID:{self.user_id} |"
+        return f"| REMINDER:{self.text} | REMINDER_ID:{self.id} | USER_ID:{self.user_id} |"
 
 
 class Note(models.Model):
-    note_id = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    note_text = models.TextField()
+    text = models.TextField()
     possible_date = models.DateTimeField(default=None, null=True)
 
     def __str__(self):
-        return f"| NOTE:{self.note_text} | NOTE_ID:{self.note_id} | USER_ID:{self.user_id} |"
+        return f"| NOTE:{self.text} | NOTE_ID:{self.id} | USER_ID:{self.user_id} |"
