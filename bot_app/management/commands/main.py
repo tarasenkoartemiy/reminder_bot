@@ -49,6 +49,12 @@ def schedule_reminder(reminder_date, user_id, message, reminder, job_id):
     scheduler.add_job(remind, trigger='date', run_date=reminder_date, args=(user_id, message, reminder), id=job_id)
 
 
+def reschedule_reminders():
+    for reminder in Reminder.objects.filter(is_active=True):
+        args = (reminder.user_id, reminder.reminder_text, reminder)
+        scheduler.add_job(remind, trigger='date', run_date=reminder.date_time, args=args, id=str(reminder.reminder_id))
+
+
 def remind(user_id, message, reminder):
     bot.send_message(user_id, message)
     reminder.is_active = None
@@ -104,6 +110,9 @@ def inline_callback_buttons(section, language, prefix, number=None, active=False
         return types.InlineKeyboardMarkup(**kwargs).add(*buttons)
 
     return inline_callback_keyboard
+
+
+reschedule_reminders()
 
 
 @bot.message_handler(commands=["start"])
