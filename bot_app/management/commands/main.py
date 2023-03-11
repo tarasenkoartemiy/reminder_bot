@@ -406,6 +406,15 @@ def reply_answer(message):
         else:
             msg = opener("enter_time", "invalid_time", language=user.language)
         bot.send_message(message.chat.id, msg)
+    elif user.status == status["change_reminder_text"]:
+        reminder = Reminder.objects.filter(user_id=message.chat.id, is_active__isnull=False)[user.change_number - 1]
+        reminder.text = message.text
+        reminder.save()
+        user.change_number = None
+        user.status = status["enter_text"]
+        user.save()
+        msg = opener("change_reminder", "change_text", language=user.language)
+        bot.send_message(message.chat.id, msg)
 
 
 scheduler.add_job(check_inactive_reminders, 'interval', seconds=1)
