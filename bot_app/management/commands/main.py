@@ -229,7 +229,14 @@ def callback_inline(call):
                 message = "Скоро. Введите /start, чтобы вернуться"
             user.save()
             new_msg = message
-        bot.edit_message_text(text=new_msg, chat_id=user_id, message_id=msg_id, parse_mode=pm, reply_markup=keyboard)
+            try:
+                bot.delete_message(chat_id=user_id, message_id=msg_id)
+            except ApiTelegramException:
+                pass
+        try:
+            bot.edit_message_text(text=new_msg, chat_id=user_id, message_id=msg_id, parse_mode=pm, reply_markup=keyboard)
+        except ApiTelegramException:
+            bot.send_message(user_id, message)
         timezone.deactivate()
     elif prefix == "CALENDAR":
         if action == "DAY":
@@ -254,21 +261,24 @@ def callback_inline(call):
             user.save()
             if trigger:
                 subsection = "valid_date"
+                try:
+                    bot.delete_message(chat_id=user_id, message_id=msg_id)
+                except ApiTelegramException:
+                    pass
             else:
                 subsection = "bad_date"
-                calendar = en_calendar if user.language == "EN" else ru_calendar
-                keyboard = calendar.create_calendar(name="CALENDAR", month=now.month, year=now.year)
             msg = opener("select_date", subsection, language=user.language)
-            try:
-                bot.edit_message_text(text=msg, chat_id=user_id, message_id=msg_id, reply_markup=keyboard)
-            except ApiTelegramException:
-                pass
+            bot.send_message(user_id, msg)
         elif action == "CANCEL":
             user.status = status["enter_text"]
             user.change_number = None
             user.save
+            try:
+                bot.delete_message(chat_id=user_id, message_id=msg_id)
+            except ApiTelegramException:
+                pass
             msg = opener("start", "home_page", language=user.language)
-            bot.edit_message_text(text=msg, chat_id=user_id, message_id=msg_id)
+            bot.send_message(user_id, msg)
         else:
             name, action, year, month, day = cd
             calendar = en_calendar if user.language == "EN" else ru_calendar
