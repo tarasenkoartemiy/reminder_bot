@@ -1,8 +1,7 @@
 {
   "start": {
     "start_of_use": "Please select a language",
-    "not_authorized": "You can't go to the home page yet",
-    "home_page": "To create a reminder or note, just write it"
+    "not_authorized": "You can't go to the home page yet"
   },
   "select_language": {
     "first_choice": "Please enter your city",

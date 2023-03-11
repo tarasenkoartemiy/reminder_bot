@@ -119,19 +119,19 @@ reschedule_reminders()
 def start(message):
     try:
         user = User.objects.get(id=message.chat.id)
-        section = "start"
         if user.time_zone:
             user.status = status["enter_text"]
             user.save()
             keyboard = reply_buttons("home_page", language=user.language)(resize_keyboard=True, row_width=2)
-            subsection = "home_page"
-            language = user.language
+            context = context_gen("enter_city", "success_response", language=user.language)
+            del context["header1"]
+            msg = render_to_string("bot_app/How_to_create.html", context=context)
+            pm = "HTML"
         else:
-            keyboard = None
+            keyboard = pm = None
             language = user.language if user.language else "EN"
-            subsection = "not_authorized"
-        message = opener(section, subsection, language=language)
-        bot.send_message(message.chat.id, message, reply_markup=keyboard)
+            msg = opener("start", "not_authorized", language=language)
+        bot.send_message(message.chat.id, msg, parse_mode=pm, reply_markup=keyboard)
     except ObjectDoesNotExist:
         User.objects.create(id=message.chat.id,
                             username=message.from_user.username,
